@@ -1,4 +1,4 @@
-﻿From: https://github.com/microsoft/IIS.Compression
+From: https://github.com/microsoft/IIS.Compression
 
 LICENSE
 
