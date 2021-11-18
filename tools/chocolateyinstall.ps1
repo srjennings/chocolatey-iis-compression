@@ -13,8 +13,8 @@ $packageArgs = @{
 
   softwareName   = 'iis-compression*'
 
-  checksum       = 'f405536c17d3082d28641ef22978081395772c91c51f4279982f5ee069eae1b1'
-  checksum64     = '701aae3ff0078dcf263bd35cb53f866c4b0160036af940deda4bef1ae1a816b6'
+  checksum       = '254915E2564F634AE276D98366EBEED1'
+  checksum64     = 'F18DD674A0036027DDEC495DB3B27855'
 
   silentArgs     = "/qn /norestart /l*v `"$($env:TEMP)\$($packageName).$($env:chocolateyPackageVersion).MsiInstall.log`""
   validExitCodes = @(0, 3010, 1641)
