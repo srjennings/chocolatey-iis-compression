@@ -46,7 +46,7 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
 		<projectUrl>
 			https://www.iis.net/downloads/microsoft/iis-compression
 		</projectUrl>
-		<!-- <iconUrl>http://cdn.rawgit.com/chocolatey-iis-compression/master/icons/iis-compression.png</iconUrl> -->
+		<iconUrl>https://www.iis.net/favicon.ico</iconUrl>
 		<!-- <copyright>Year Software Vendor</copyright> -->
 		<!-- If there is a license Url available, it is required for the community feed -->
 		<licenseUrl>
@@ -74,7 +74,7 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
 
 			An IIS compression scheme provider is a pluggable extension of IIS `StaticCompressionModule` and `DynamicCompressionModule` - essentially a dynamic link library (dll) that implements the compression algorithm and exposes the [IIS HTTP Compression API](https://msdn.microsoft.com/en-us/library/dd692872.aspx). IIS `StaticCompressionModule` and `DynamicCompressionModule` load the registered compression scheme providers into worker process at runtime, and leverage them to perform compression for static files and dynamically-generated contents, respectively.
 		</description>
-		<!-- <releaseNotes>__REPLACE_OR_REMOVE__MarkDown_Okay</releaseNotes> -->
+		<releaseNotes>Bug fix: High memory usage ([#41](https://github.com/microsoft/IIS.Compression/issues/41))</releaseNotes>
 		<!-- =============================== -->
 		<!-- Specifying dependencies and version ranges? https://docs.nuget.org/create/versioning#specifying-version-ranges-in-.nuspec-files -->
 		<!--
