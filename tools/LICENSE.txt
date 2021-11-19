@@ -1,5 +1,0 @@
-From: https://github.com/microsoft/IIS.Compression
-
-LICENSE
-
-https://github.com/microsoft/IIS.Compression/blob/master/LICENSE
