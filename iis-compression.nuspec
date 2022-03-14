@@ -26,7 +26,7 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
 		<!-- Is the version a prerelease of a version? https://docs.nuget.org/create/versioning#creating-prerelease-packages -->
 		<!-- Note that unstable versions like 0.0.1 can be considered a released version, but it's possible that one can release a 0.0.1-beta before you release a 0.0.1 version. If the version number is final, that is considered a released version and not a prerelease. -->
 		<version>
-			1.0.5113
+			1.0.6502
 		</version>
 		<packageSourceUrl>https://github.com/srjennings/chocolatey-iis-compression</packageSourceUrl>
 		<!-- owners is a poor name for maintainers of the package. It sticks around by this name for compatibility reasons. It basically means you. -->
@@ -74,7 +74,9 @@ This is a nuspec. It mostly adheres to https://docs.nuget.org/create/Nuspec-Refe
 
 			An IIS compression scheme provider is a pluggable extension of IIS `StaticCompressionModule` and `DynamicCompressionModule` - essentially a dynamic link library (dll) that implements the compression algorithm and exposes the [IIS HTTP Compression API](https://msdn.microsoft.com/en-us/library/dd692872.aspx). IIS `StaticCompressionModule` and `DynamicCompressionModule` load the registered compression scheme providers into worker process at runtime, and leverage them to perform compression for static files and dynamically-generated contents, respectively.
 		</description>
-		<releaseNotes>Bug fix: High memory usage ([#41](https://github.com/microsoft/IIS.Compression/issues/41))</releaseNotes>
+		<releaseNotes>
+			See https://github.com/microsoft/IIS.Compression/releases for release notes.
+		</releaseNotes>
 		<!-- =============================== -->
 		<!-- Specifying dependencies and version ranges? https://docs.nuget.org/create/versioning#specifying-version-ranges-in-.nuspec-files -->
 		<!--
