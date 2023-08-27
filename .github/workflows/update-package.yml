@@ -8,9 +8,6 @@ on:
 jobs:
   update:
     runs-on: windows-latest
-    outputs:
-      x86_checksum: ${{ steps.fetch.outputs.x86_checksum }}
-      x64_checksum: ${{ steps.fetch.outputs.x64_checksum }}
 
     steps:
     - name: Checkout code
@@ -27,6 +24,7 @@ jobs:
 
         # Use regex to find the File Name and Sha256Sum values
         $matches = [regex]::Matches($bodyContent, '\|\s*(.*?)\s*\|\s*(.*?)\s*\|')
+        $urlMatches = [regex]::Matches($bodyContent, 'https://download\.microsoft\.com/download/[^\s]*\.msi')        
 
         # Create an empty array to hold the results
         $results = @()
@@ -70,38 +68,28 @@ jobs:
         echo "x64_msi=$amd64_msi" >> $GITHUB_ENV
         echo "amd64_sha256=$amd64_sha256" >> $GITHUB_ENV
 
-    - name: Validate Checksums
-      id: validate
-      run: |
-        $calculated_x86_checksum = (Get-FileHash -Path ${{ steps.fetch.outputs.x86_checksum }} -Algorithm SHA256).Hash.ToLower()
-        $calculated_x64_checksum = (Get-FileHash -Path ${{ steps.fetch.outputs.x64_checksum }} -Algorithm SHA256).Hash.ToLower()
+        # Initialize variables to hold the URLs
+        $x86_url = $null
+        $amd64_url = $null
 
-        if ($calculated_x86_checksum -ne ${{ steps.fetch.outputs.x86_checksum }}) {
-          Write-Host "x86 checksum mismatch"
-          echo "checksum_valid=false" >> $GITHUB_ENV
-          exit 0
+        # Capture URLs
+        foreach ($urlMatch in $urlMatches) {
+            $url = $urlMatch.Value
+            if ($url -match 'iiscompression_x86\.msi') {
+                $x86_url = $url
+            }
+            elseif ($url -match 'iiscompression_amd64\.msi') {
+                $amd64_url = $url
+            }
         }
 
-        if ($calculated_x64_checksum -ne ${{ steps.fetch.outputs.x64_checksum }}) {
-          Write-Host "x64 checksum mismatch"
-          echo "checksum_valid=false" >> $GITHUB_ENV
-          exit 0
-        }
+        # Output the captured URLs
+        echo "x86_url=$x86_url"
+        echo "amd64_url=$amd64_url"
 
-        echo "checksum_valid=true" >> $GITHUB_ENV
+        # download the files
+        echo "Downloading files..."
+        Invoke-WebRequest -Uri $x86_url -OutFile $x86_msi
+        Invoke-WebRequest -Uri $amd64_url -OutFile $amd64_msi
 
-    - name: Update chocolateyinstall.ps1
-      if: env.checksum_valid == 'true'
-      run: |
-        (Get-Content -Path './tools/chocolateyinstall.ps1') -replace 'checksum.*', "checksum = '${{ steps.fetch.outputs.x86_checksum }}'" | Set-Content -Path './tools/chocolateyinstall.ps1'
-        (Get-Content -Path './tools/chocolateyinstall.ps1') -replace 'checksum64.*', "checksum64 = '${{ steps.fetch.outputs.x64_checksum }}'" | Set-Content -Path './tools/chocolateyinstall.ps1'
-
-    - name: Create Pull Request
-      if: env.checksum_valid == 'true'
-      uses: peter-evans/create-pull-request@v3
-      with:
-        title: "Update to IIS.Compression latest"
-        commit-message: "Automatically updated checksums to latest IIS.Compression release."
-        body: "Automatically updated checksums to latest IIS.Compression release."
-        branch: update-package
-        base: main
+        #todo later
