@@ -62,11 +62,12 @@ jobs:
       run: |
           sed -i "s/checksum.*/$x86_checksum/g" ./tools/chocolateyinstall.ps1
           sed -i "s/checksum64.*/$x64_checksum/g" ./tools/chocolateyinstall.ps1
-          - name: Create Pull Request
-          uses: peter-evans/create-pull-request@v3
-          with:
-              title: "Update to IIS.Compression v${{ steps.get-latest-release.outputs.tag_name }}"
-              commit-message: "Update to IIS.Compression v${{ steps.get_latest_release.outputs.tag_name }}" 
-              body: Automatically updated checksums to latest IIS.Compression release.
-              branch: update-package
-              base: main
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+          title: "Update to IIS.Compression v${{ steps.get-latest-release.outputs.tag_name }}"
+          commit-message: "Update to IIS.Compression v${{ steps.get_latest_release.outputs.tag_name }}" 
+          body: Automatically updated checksums to latest IIS.Compression release.
+          branch: update-package
+          base: main
