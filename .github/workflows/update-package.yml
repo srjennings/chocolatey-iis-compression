@@ -1,0 +1,43 @@
+# .github/workflows/update-package.yml
+
+name: Update Package 
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # daily at midnight
+  workflow_dispatch:
+
+jobs:
+
+  update:
+
+    runs-on: windows-latest
+    
+    steps:
+    
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Get latest release
+      id: get-latest-release
+      uses: pozetroninc/github-action-get-latest-release@master
+      with: 
+        repository: microsoft/IIS.Compression
+        excludes: prerelease, draft
+
+    - name: Update checksums
+      uses: microsoft/variable-substitution@v1
+      with:
+        files: 'tools/chocolateyinstall.ps1'
+        substitutions: |
+          checksum=${{steps.get-latest-release.outputs.checksum32}}  
+          checksum64=${{steps.get-latest-release.outputs.checksum64}}
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        title: "Update to IIS.Compression v${{ steps.get-latest-release.outputs.tag_name }}"
+        commit-message: "Update to IIS.Compression v${{ steps.get_latest_release.outputs.tag_name }}" 
+        body: Automatically updated checksums to latest IIS.Compression release.
+        branch: update-package
+        base: main
