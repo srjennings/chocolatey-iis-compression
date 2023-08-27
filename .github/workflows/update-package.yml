@@ -18,26 +18,55 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Get latest release
-      id: get-latest-release
-      uses: pozetroninc/github-action-get-latest-release@master
-      with: 
-        repository: microsoft/IIS.Compression
-        excludes: prerelease, draft
-
-    - name: Update checksums
-      uses: microsoft/variable-substitution@v1
+    - name: Get latest release info
+      id: get_latest_release
+      uses: octokit/request-action@v2.x
       with:
-        files: 'tools/chocolateyinstall.ps1'
-        substitutions: |
-          checksum=${{steps.get-latest-release.outputs.checksum32}}  
-          checksum64=${{steps.get-latest-release.outputs.checksum64}}
+          route: GET /repos/microsoft/IIS.Compression/releases/latest
+          redirect: follow
 
-    - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v3
-      with:
-        title: "Update to IIS.Compression v${{ steps.get-latest-release.outputs.tag_name }}"
-        commit-message: "Update to IIS.Compression v${{ steps.get_latest_release.outputs.tag_name }}" 
-        body: Automatically updated checksums to latest IIS.Compression release.
-        branch: update-package
-        base: main
+    - name: Parse release body
+      id: parse_release_body
+      run: |
+          body="${{ steps.get_latest_release.outputs.data }}"
+          x86_url=$(echo "$body" | grep -o 'https://[^"]*' | grep x86)
+          x86_checksum=$(echo "$body" | grep -A1 "$x86_url" | grep -o '[a-f0-9]*')
+          x64_url=$(echo "$body" | grep -o 'https://[^"]*' | grep x64) 
+          x64_checksum=$(echo "$body" | grep -A1 "$x64_url" | grep -o '[a-f0-9]*')
+          echo "::set-output name=x86_url::$x86_url"
+          echo "::set-output name=x86_checksum::$x86_checksum"
+          echo "::set-output name=x64_url::$x64_url"
+          echo "::set-output name=x64_checksum::$x64_checksum"
+
+    - name: Download installers
+      run: |
+          curl -L -o iiscompression_x86.msi ${{ steps.parse_release_body.outputs.x86_url }}
+          curl -L -o iiscompression_x64.msi ${{ steps.parse_release_body.outputs.x64_url }}
+
+    - name: Verify checksums
+      run: |
+          x86_checksum=$(sha256sum iiscompression_x86.msi | cut -d' ' -f1)
+          if [ "$x86_checksum" != "${{ steps.parse_release_body.outputs.x86_checksum }}" ]; then
+          echo "x86 checksum mismatch"
+          exit 1
+          fi
+          
+          x64_checksum=$(sha256sum iiscompression_x64.msi | cut -d' ' -f1)
+          if [ "$x64_checksum" != "${{ steps.parse_release_body.outputs.x64_checksum }}" ]; then
+          echo "x64 checksum mismatch"
+          exit 1
+          fi
+
+    - name: Update chocolateyinstall.ps1
+      if: ${{ failure() }} 
+      run: |
+          sed -i "s/checksum.*/$x86_checksum/g" ./tools/chocolateyinstall.ps1
+          sed -i "s/checksum64.*/$x64_checksum/g" ./tools/chocolateyinstall.ps1
+          - name: Create Pull Request
+          uses: peter-evans/create-pull-request@v3
+          with:
+              title: "Update to IIS.Compression v${{ steps.get-latest-release.outputs.tag_name }}"
+              commit-message: "Update to IIS.Compression v${{ steps.get_latest_release.outputs.tag_name }}" 
+              body: Automatically updated checksums to latest IIS.Compression release.
+              branch: update-package
+              base: main
