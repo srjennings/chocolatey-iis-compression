@@ -1,6 +1,4 @@
-# .github/workflows/update-package.yml
-
-name: Update Package 
+name: Simplified Update Package
 
 on:
   schedule:
@@ -8,67 +6,102 @@ on:
   workflow_dispatch:
 
 jobs:
-
   update:
-
     runs-on: windows-latest
-    
+    outputs:
+      x86_checksum: ${{ steps.fetch.outputs.x86_checksum }}
+      x64_checksum: ${{ steps.fetch.outputs.x64_checksum }}
+
     steps:
-    
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Get latest release info
-      id: get_latest_release
-      uses: octokit/request-action@v2.x
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          route: GET /repos/microsoft/IIS.Compression/releases/latest
-          redirect: follow
-
-    - name: Parse release body
-      id: parse_release_body
+    - name: Fetch latest release info and download
+      id: fetch
       run: |
-          body="${{ steps.get_latest_release.outputs.data }}"
-          x86_url=$(echo "$body" | grep -o 'https://[^"]*' | grep x86)
-          x86_checksum=$(echo "$body" | grep -A1 "$x86_url" | grep -o '[a-f0-9]*')
-          x64_url=$(echo "$body" | grep -o 'https://[^"]*' | grep x64) 
-          x64_checksum=$(echo "$body" | grep -A1 "$x64_url" | grep -o '[a-f0-9]*')
-          echo "::set-output name=x86_url::$x86_url"
-          echo "::set-output name=x86_checksum::$x86_checksum"
-          echo "::set-output name=x64_url::$x64_url"
-          echo "::set-output name=x64_checksum::$x64_checksum"
+        # Fetch the latest release information from GitHub API
+        $response = Invoke-RestMethod -Uri 'https://api.github.com/repos/microsoft/IIS.Compression/releases/latest'
 
-    - name: Download installers
-      run: |
-          curl -L -o iiscompression_x86.msi ${{ steps.parse_release_body.outputs.x86_url }}
-          curl -L -o iiscompression_x64.msi ${{ steps.parse_release_body.outputs.x64_url }}
+        # Extract the body content
+        $bodyContent = $response.body
 
-    - name: Verify checksums
+        # Use regex to find the File Name and Sha256Sum values
+        $matches = [regex]::Matches($bodyContent, '\|\s*(.*?)\s*\|\s*(.*?)\s*\|')
+
+        # Create an empty array to hold the results
+        $results = @()
+
+        # Loop through the matches to extract the values
+        foreach ($match in $matches) {
+            $fileName = $match.Groups[1].Value
+            $sha256Sum = $match.Groups[2].Value
+
+            # Create a custom object to hold the File Name and Sha256Sum
+            $obj = [PSCustomObject]@{
+                'File Name' = $fileName
+                'Sha256Sum' = $sha256Sum
+            }
+
+            # Add the custom object to the results array
+            $results += $obj
+        }
+
+        # Initialize variables to hold the msi files and their sha256sums
+        $x86_msi = $null
+        $x86_sha256 = $null
+        $amd64_msi = $null
+        $amd64_sha256 = $null
+
+        # Loop through the results array to separate and capture the values
+        foreach ($result in $results) {
+            if ($result.'File Name' -eq 'iiscompression_x86.msi') {
+                $x86_msi = $result.'File Name'
+                $x86_sha256 = $result.'Sha256Sum'
+            }
+            elseif ($result.'File Name' -eq 'iiscompression_amd64.msi') {
+                $amd64_msi = $result.'File Name'
+                $amd64_sha256 = $result.'Sha256Sum'
+            }
+        }
+
+        # Output the captured variables
+        echo "x86_msi=$x86_msi" >> $GITHUB_ENV
+        echo "x86_sha256=$x86_sha256" >> $GITHUB_ENV
+        echo "x64_msi=$amd64_msi" >> $GITHUB_ENV
+        echo "amd64_sha256=$amd64_sha256" >> $GITHUB_ENV
+
+    - name: Validate Checksums
+      id: validate
       run: |
-          x86_checksum=$(sha256sum iiscompression_x86.msi | cut -d' ' -f1)
-          if [ "$x86_checksum" != "${{ steps.parse_release_body.outputs.x86_checksum }}" ]; then
-          echo "x86 checksum mismatch"
-          exit 1
-          fi
-          
-          x64_checksum=$(sha256sum iiscompression_x64.msi | cut -d' ' -f1)
-          if [ "$x64_checksum" != "${{ steps.parse_release_body.outputs.x64_checksum }}" ]; then
-          echo "x64 checksum mismatch"
-          exit 1
-          fi
+        $calculated_x86_checksum = (Get-FileHash -Path ${{ steps.fetch.outputs.x86_checksum }} -Algorithm SHA256).Hash.ToLower()
+        $calculated_x64_checksum = (Get-FileHash -Path ${{ steps.fetch.outputs.x64_checksum }} -Algorithm SHA256).Hash.ToLower()
+
+        if ($calculated_x86_checksum -ne ${{ steps.fetch.outputs.x86_checksum }}) {
+          Write-Host "x86 checksum mismatch"
+          echo "checksum_valid=false" >> $GITHUB_ENV
+          exit 0
+        }
+
+        if ($calculated_x64_checksum -ne ${{ steps.fetch.outputs.x64_checksum }}) {
+          Write-Host "x64 checksum mismatch"
+          echo "checksum_valid=false" >> $GITHUB_ENV
+          exit 0
+        }
+
+        echo "checksum_valid=true" >> $GITHUB_ENV
 
     - name: Update chocolateyinstall.ps1
-      if: ${{ failure() }} 
+      if: env.checksum_valid == 'true'
       run: |
-          sed -i "s/checksum.*/$x86_checksum/g" ./tools/chocolateyinstall.ps1
-          sed -i "s/checksum64.*/$x64_checksum/g" ./tools/chocolateyinstall.ps1
+        (Get-Content -Path './tools/chocolateyinstall.ps1') -replace 'checksum.*', "checksum = '${{ steps.fetch.outputs.x86_checksum }}'" | Set-Content -Path './tools/chocolateyinstall.ps1'
+        (Get-Content -Path './tools/chocolateyinstall.ps1') -replace 'checksum64.*', "checksum64 = '${{ steps.fetch.outputs.x64_checksum }}'" | Set-Content -Path './tools/chocolateyinstall.ps1'
 
     - name: Create Pull Request
+      if: env.checksum_valid == 'true'
       uses: peter-evans/create-pull-request@v3
       with:
-          title: "Update to IIS.Compression v${{ steps.get-latest-release.outputs.tag_name }}"
-          commit-message: "Update to IIS.Compression v${{ steps.get_latest_release.outputs.tag_name }}" 
-          body: Automatically updated checksums to latest IIS.Compression release.
-          branch: update-package
-          base: main
+        title: "Update to IIS.Compression latest"
+        commit-message: "Automatically updated checksums to latest IIS.Compression release."
+        body: "Automatically updated checksums to latest IIS.Compression release."
+        branch: update-package
+        base: main
