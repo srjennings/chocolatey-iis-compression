@@ -22,6 +22,7 @@ jobs:
       id: get_latest_release
       uses: octokit/request-action@v2.x
       with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           route: GET /repos/microsoft/IIS.Compression/releases/latest
           redirect: follow
 
