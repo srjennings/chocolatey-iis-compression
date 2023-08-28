@@ -116,10 +116,12 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $nuspecContent.package.metadata.projectUrl = $response.html_url
     $nuspecContent.package.metadata.requireLicenseAcceptance = $true
     $nuspecContent.Save("..\..\iis-compression.nuspec")
-    #Write-Output "Save completed."
+    Write-Output "Save completed."
+    Write-Output "updated=$true" >> $GITHUB_ENV
   }
   elseif ($update -eq $false) {
     Write-Output "There is no need to update, exiting."
+    Write-Output "updated=$false" >> $GITHUB_ENV
     exit 0
   }
 }
