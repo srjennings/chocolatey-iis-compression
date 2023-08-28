@@ -12,7 +12,19 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
-    
+
     # run update-package.ps1
     - name: Run update package script
       run: ./update-package.ps1
+
+    # Run validation checks (replace with your actual validation script)
+    - name: Run validation checks
+      run: ./run-validation-checks.ps1
+
+    # Create Pull Request
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        title: "Update Package"
+        body: "This is an automated pull request to update the package."
+        branch: "feature/update-package-${{ github.run_number }}"
