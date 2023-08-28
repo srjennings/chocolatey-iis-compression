@@ -19,7 +19,8 @@ jobs:
 
     # Create Pull Request
     - name: Create Pull Request
-      #if: env.updated == 'True'
+    # toggle
+      if: env.updated == 'True'
       uses: peter-evans/create-pull-request@v3
       with:
         title: "Update Package"
