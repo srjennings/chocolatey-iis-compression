@@ -23,14 +23,14 @@ jobs:
         $bodyContent = $response.body
 
         # Use regex to find the File Name and Sha256Sum values
-        $matches = [regex]::Matches($bodyContent, '\|\s*(.*?)\s*\|\s*(.*?)\s*\|')
+        $fileNameMatches = [regex]::Matches($bodyContent, '\|\s*(.*?)\s*\|\s*(.*?)\s*\|')
         $urlMatches = [regex]::Matches($bodyContent, 'https://download\.microsoft\.com/download/[^\s]*\.msi')        
 
         # Create an empty array to hold the results
         $results = @()
 
         # Loop through the matches to extract the values
-        foreach ($match in $matches) {
+        foreach ($match in $fileNameMatches) {
             $fileName = $match.Groups[1].Value
             $sha256Sum = $match.Groups[2].Value
 
@@ -63,10 +63,10 @@ jobs:
         }
 
         # Output the captured variables
-        echo "x86_msi=$x86_msi" >> $GITHUB_ENV
-        echo "x86_sha256=$x86_sha256" >> $GITHUB_ENV
-        echo "x64_msi=$amd64_msi" >> $GITHUB_ENV
-        echo "amd64_sha256=$amd64_sha256" >> $GITHUB_ENV
+        Write-Output "x86_msi=$x86_msi" >> $GITHUB_ENV
+        Write-Output "x86_sha256=$x86_sha256" >> $GITHUB_ENV
+        Write-Output "x64_msi=$amd64_msi" >> $GITHUB_ENV
+        Write-Output "amd64_sha256=$amd64_sha256" >> $GITHUB_ENV
 
         # Initialize variables to hold the URLs
         $x86_url = $null
@@ -84,12 +84,23 @@ jobs:
         }
 
         # Output the captured URLs
-        echo "x86_url=$x86_url"
-        echo "amd64_url=$amd64_url"
+        Write-Output "x86_url=$x86_url"
+        Write-Output "amd64_url=$amd64_url"
 
         # download the files
-        echo "Downloading files..."
+        Write-Output "Downloading files..."
         Invoke-WebRequest -Uri $x86_url -OutFile $x86_msi
         Invoke-WebRequest -Uri $amd64_url -OutFile $amd64_msi
 
-        #todo later
+        # Validate file hashes
+        Write-Output "Validating file hashes..."
+        # Calculate hashes of downloaded files
+        $x86_hash = (Get-FileHash -Path $x86_msi -Algorithm SHA256).Hash
+        $amd64_hash = (Get-FileHash -Path $amd64_msi -Algorithm SHA256).Hash
+        # Validate hashes
+        if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
+            Write-Output "Hashes match! Downloads are valid."
+        }
+        else {
+            Write-Output "Hashes do not match downloads. Please try downloading again."
+        }
