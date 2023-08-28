@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 0 * * *' # daily at midnight
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   update:
@@ -19,7 +22,6 @@ jobs:
 
     # Create Pull Request
     - name: Create Pull Request
-    # toggle
       if: env.updated == 'True'
       uses: peter-evans/create-pull-request@v3
       with:
@@ -27,3 +29,16 @@ jobs:
         body: "This is an automated pull request to update the package."
         branch: "feature/update-package-${{ github.run_number }}"
 
+    # Install Chocolatey
+    - name: Install Chocolatey
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+    # Add API Key for Chocolatey
+    - name: Add API Key
+      run: choco apikey add --source "https://push.chocolatey.org/" --key "${{ secrets.CHOCO_API_KEY }}"
+
+    # Push Chocolatey Package
+    - name: Push Package
+      run: choco push iis-compression.nupkg --source "https://push.chocolatey.org/"
