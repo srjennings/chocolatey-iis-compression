@@ -30,6 +30,26 @@ $msiInfo = $results | Group-Object 'File Name' -AsHashTable
 $x86_msi, $x86_sha256 = $msiInfo['iiscompression_x86.msi'].'File Name', $msiInfo['iiscompression_x86.msi'].'Sha256Sum'
 $amd64_msi, $amd64_sha256 = $msiInfo['iiscompression_amd64.msi'].'File Name', $msiInfo['iiscompression_amd64.msi'].'Sha256Sum'
 
+# Update chocolateyinstall.ps1
+Write-Host "Updating Chocolatey Install Script"
+
+$urls = $urlMatches | ForEach-Object { $_.Value }
+$x86_url = $urls -match 'iiscompression_x86\.msi'
+$amd64_url = $urls -match 'iiscompression_amd64\.msi'
+
+Invoke-WebRequest -Uri "$x86_url" -OutFile $x86_msi
+Invoke-WebRequest -Uri "$amd64_url" -OutFile $amd64_msi
+
+$x86_hash = (Get-FileHash -Path $x86_msi -Algorithm SHA256).Hash
+$amd64_hash = (Get-FileHash -Path $amd64_msi -Algorithm SHA256).Hash
+
+$content = Get-Content -Path "..\..\tools\chocolateyinstall.ps1"
+$content = $content -replace 'url = .*', "url = '$x86_url'"
+$content = $content -replace 'url64 = .*', "url64 = '$amd64_url'"
+$content = $content -replace 'checksum = .*', "checksum = '$x86_hash'"
+$content = $content -replace 'checksum64 = .*', "checksum64 = '$amd64_hash'"
+Set-Content -Path "..\..\tools\chocolateyinstall.ps1" -Value $content
+
 Write-Output "x86_msi=$x86_msi" >> $GITHUB_ENV
 Write-Output "x86_sha256=$x86_sha256" >> $GITHUB_ENV
 Write-Output "x64_msi=$amd64_msi" >> $GITHUB_ENV
@@ -62,7 +82,7 @@ $amd64_hash = (Get-FileHash -Path $amd64_msi -Algorithm SHA256).Hash
 
 if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   "Downloads are valid & Hashes match."
-  [xml]$nuspecContent = Get-Content -Path .\iis-compression.nuspec
+  [xml]$nuspecContent = Get-Content -Path "..\..\iis-compression.nuspec"
   $id = $nuspecContent.package.metadata.id
   Write-Output "ID: $id"
   $nuspecVersion = $nuspecContent.package.metadata.version
@@ -74,10 +94,9 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $nuspecContent.package.metadata.licenseUrl = $response.license.url
     $nuspecContent.package.metadata.projectUrl = $response.html_url
     $nuspecContent.package.metadata.requireLicenseAcceptance = $true
-    $nuspecContent.Save(".\\iis-compression.nuspec")
+    $nuspecContent.Save("..\..\iis-compression.nuspec")
     Write-Output "Save completed."
   }
-
 }
 else {
   "Hashes do not match downloads. Please try downloading again."
