@@ -16,10 +16,12 @@ jobs:
     # run update-package.ps1
     - name: Run update package script
       run: ./update-package.ps1
+      working-directory: .github\workflows
 
     # Run validation checks (replace with your actual validation script)
     - name: Run validation checks
       run: ./run-validation-checks.ps1
+      working-directory: .github\workflows
 
     # Create Pull Request
     - name: Create Pull Request
