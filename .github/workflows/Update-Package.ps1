@@ -89,7 +89,8 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   
   # Read nuspec file
   [xml]$nuspecContent = Get-Content -Path "..\..\iis-compression.nuspec"
-  $nuspecVersion = $nuspecContent.package.metadata.version
+  $nuspecVersion = $nuspecContent.package.metadata.version.Trim()
+
   
   # Output versions
   Write-Output "MSI Version: $msiVersion"
