@@ -13,6 +13,8 @@
 
 #>
 
+$TEMP = [System.IO.Path]::GetTempPath()
+
 $response = Invoke-RestMethod -Uri 'https://api.github.com/repos/microsoft/IIS.Compression/releases/latest'
 $bodyContent = $response.body
 
@@ -37,11 +39,14 @@ $urls = $urlMatches | ForEach-Object { $_.Value }
 $x86_url = $urls -match 'iiscompression_x86\.msi'
 $amd64_url = $urls -match 'iiscompression_amd64\.msi'
 
-Invoke-WebRequest -Uri "$x86_url" -OutFile $x86_msi
-Invoke-WebRequest -Uri "$amd64_url" -OutFile $amd64_msi
+$x86_msi_path = Join-Path -Path $TEMP -ChildPath $x86_msi
+$amd64_msi_path = Join-Path -Path $TEMP -ChildPath $amd64_msi
 
-$x86_hash = (Get-FileHash -Path $x86_msi -Algorithm SHA256).Hash
-$amd64_hash = (Get-FileHash -Path $amd64_msi -Algorithm SHA256).Hash
+Invoke-WebRequest -Uri "$x86_url" -OutFile $x86_msi_path
+Invoke-WebRequest -Uri "$amd64_url" -OutFile $amd64_msi_path
+
+$x86_hash = (Get-FileHash -Path $x86_msi_path -Algorithm SHA256).Hash
+$amd64_hash = (Get-FileHash -Path $amd64_msi_path -Algorithm SHA256).Hash
 
 $content = Get-Content -Path "..\..\tools\chocolateyinstall.ps1"
 $content = $content -replace 'url = .*', "url = '$x86_url'"
@@ -50,20 +55,9 @@ $content = $content -replace 'checksum = .*', "checksum = '$x86_hash'"
 $content = $content -replace 'checksum64 = .*', "checksum64 = '$amd64_hash'"
 Set-Content -Path "..\..\tools\chocolateyinstall.ps1" -Value $content
 
-Write-Output "x86_msi=$x86_msi" >> $GITHUB_ENV
-Write-Output "x86_sha256=$x86_sha256" >> $GITHUB_ENV
-Write-Output "x64_msi=$amd64_msi" >> $GITHUB_ENV
-Write-Output "amd64_sha256=$amd64_sha256" >> $GITHUB_ENV
-
-$urls = $urlMatches | ForEach-Object { $_.Value }
-$x86_url = $urls -match 'iiscompression_x86\.msi'
-$amd64_url = $urls -match 'iiscompression_amd64\.msi'
-
-Invoke-WebRequest -Uri "$x86_url" -OutFile $x86_msi
-Invoke-WebRequest -Uri "$amd64_url" -OutFile $amd64_msi
-
 function Get-MsiVersion {
   param ([string]$msiPath)
+  $msiPath = Join-Path -Path $TEMP -ChildPath $msiPath
   $windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
   $database = $windowsInstaller.OpenDatabase($msiPath, 0)
   $view = $database.OpenView("SELECT `Value` FROM `Property` WHERE `Property` = 'ProductVersion'")
@@ -72,13 +66,8 @@ function Get-MsiVersion {
   return $record.StringData(1)
 }
 
-$x86_hash = (Get-FileHash -Path $x86_msi -Algorithm SHA256).Hash
-$amd64_hash = (Get-FileHash -Path $amd64_msi -Algorithm SHA256).Hash
-
-Write-Output "Calculated x86 SHA256: $x86_hash"
-Write-Output "Expected x86 SHA256: $x86_sha256"
-Write-Output "Calculated amd64 SHA256: $amd64_hash"
-Write-Output "Expected amd64 SHA256: $amd64_sha256"
+$x86_hash = (Get-FileHash -Path $x86_msi_path -Algorithm SHA256).Hash
+$amd64_hash = (Get-FileHash -Path $amd64_msi_path -Algorithm SHA256).Hash
 
 # Check if hashes match
 if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
@@ -91,7 +80,6 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   [xml]$nuspecContent = Get-Content -Path "..\..\iis-compression.nuspec"
   $nuspecVersion = $nuspecContent.package.metadata.version.Trim()
 
-  
   # Output versions
   Write-Output "MSI Version: $msiVersion"
   Write-Output "Nuspec Version: $nuspecVersion"
@@ -100,7 +88,6 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   Write-Output "Fixed version - $msiVersion"
 
   if ($msiVersion -eq $nuspecVersion) {
-
     Write-Output "MSI and nuspec versions match."
     $update = $false
   }
@@ -117,11 +104,9 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $nuspecContent.package.metadata.requireLicenseAcceptance = $true
     $nuspecContent.Save("..\..\iis-compression.nuspec")
     Write-Output "Save completed."
-    Write-Output "updated=$true" >> $GITHUB_ENV
   }
   elseif ($update -eq $false) {
     Write-Output "There is no need to update, exiting."
-    Write-Output "updated=$false" >> $GITHUB_ENV
     exit 0
   }
 }
@@ -130,4 +115,3 @@ else {
   Write-Output "Exiting with failure code."
   exit 1
 }
-
