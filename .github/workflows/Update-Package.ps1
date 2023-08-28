@@ -80,15 +80,31 @@ Write-Output "Expected x86 SHA256: $x86_sha256"
 Write-Output "Calculated amd64 SHA256: $amd64_hash"
 Write-Output "Expected amd64 SHA256: $amd64_sha256"
 
+# Check if hashes match
 if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   Write-Output "Downloads are valid & Hashes match."
+  
+  # Get version from MSI
+  $msiVersion = Get-MsiVersion -msiPath $x86_msi
+  
+  # Read nuspec file
   [xml]$nuspecContent = Get-Content -Path "..\..\iis-compression.nuspec"
-  $id = $nuspecContent.package.metadata.id
-  Write-Output "ID: $id"
   $nuspecVersion = $nuspecContent.package.metadata.version
-  Write-Output "Version: $nuspecVersion"
+  
+  # Output versions
+  Write-Output "MSI Version: $msiVersion"
+  Write-Output "Nuspec Version: $nuspecVersion"
+  
+  # Check if versions match
+  if ($msiVersion -eq $nuspecVersion) {
+    Write-Output "MSI and nuspec versions match."
+    $update = $false
+  } else {
+    Write-Output "MSI and nuspec versions do not match. Please update."
+    $update = $true
+  }
 
-  if ($version -ne $nuspecVersion) {
+  if ($update) {
     Write-Output "Updating nuspec file with new version $version"
     $nuspecContent.package.metadata.version = $version
     $nuspecContent.package.metadata.licenseUrl = $response.license.url
@@ -96,6 +112,9 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $nuspecContent.package.metadata.requireLicenseAcceptance = $true
     $nuspecContent.Save("..\..\iis-compression.nuspec")
     Write-Output "Save completed."
+  } else {
+    Write-Output "There is no need to update, exiting."
+    exit 0
   }
 }
 else {
