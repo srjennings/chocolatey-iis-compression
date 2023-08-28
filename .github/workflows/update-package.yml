@@ -17,10 +17,6 @@ jobs:
       run: ./update-package.ps1
       working-directory: .github\workflows
 
-    # - name: Run validation checks
-    #   run: ./run-validation-checks.ps1
-    #   working-directory: .github\workflows
-
     # Create Pull Request
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
