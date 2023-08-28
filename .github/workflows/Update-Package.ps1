@@ -99,11 +99,7 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   $msiVersion = $msiVersion -replace '(\d+)\.(\d+)\.0*(\d+)', '$1.$2.$3'
   Write-Output "Fixed version - $msiVersion"
 
-  # Check if versions match
-  $normalizedMsiVersion = ($msiVersion -split '\.') -join '.'
-  $normalizedNuspecVersion = ($nuspecVersion -split '\.') -join '.'
-
-  if ($normalizedMsiVersion -eq $normalizedNuspecVersion) {
+  if ($msiVersion -eq $nuspecVersion) {
 
     Write-Output "MSI and nuspec versions match."
     $update = $false
@@ -113,7 +109,7 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $update = $true
   }
 
-  if ($update) {
+  if ($update -eq $true) {
     Write-Output "Updating nuspec file with new version $version"
     $nuspecContent.package.metadata.version = $version
     $nuspecContent.package.metadata.licenseUrl = $response.license.url
@@ -122,7 +118,7 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $nuspecContent.Save("..\..\iis-compression.nuspec")
     #Write-Output "Save completed."
   }
-  else {
+  elseif ($update -eq $false) {
     Write-Output "There is no need to update, exiting."
     exit 0
   }
