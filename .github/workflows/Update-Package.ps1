@@ -48,13 +48,6 @@ Invoke-WebRequest -Uri "$amd64_url" -OutFile $amd64_msi_path
 $x86_hash = (Get-FileHash -Path $x86_msi_path -Algorithm SHA256).Hash
 $amd64_hash = (Get-FileHash -Path $amd64_msi_path -Algorithm SHA256).Hash
 
-$content = Get-Content -Path "..\..\tools\chocolateyinstall.ps1"
-$content = $content -replace 'url = .*', "url = '$x86_url'"
-$content = $content -replace 'url64 = .*', "url64 = '$amd64_url'"
-$content = $content -replace 'checksum = .*', "checksum = '$x86_hash'"
-$content = $content -replace 'checksum64 = .*', "checksum64 = '$amd64_hash'"
-Set-Content -Path "..\..\tools\chocolateyinstall.ps1" -Value $content
-
 function Get-MsiVersion {
   param ([string]$msiPath)
   $msiPath = Join-Path -Path $TEMP -ChildPath $msiPath
@@ -104,6 +97,14 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     $nuspecContent.package.metadata.requireLicenseAcceptance = $true
     $nuspecContent.Save("..\..\iis-compression.nuspec")
     Write-Output "Save completed."
+
+    # update chocolateyinstall.ps1
+    $content = Get-Content -Path "..\..\tools\chocolateyinstall.ps1"
+    $content = $content -replace 'url = .*', "url = '$x86_url'"
+    $content = $content -replace 'url64 = .*', "url64 = '$amd64_url'"
+    $content = $content -replace 'checksum = .*', "checksum = '$x86_hash'"
+    $content = $content -replace 'checksum64 = .*', "checksum64 = '$amd64_hash'"
+    Set-Content -Path "..\..\tools\chocolateyinstall.ps1" -Value $content
   }
   elseif ($update -eq $false) {
     Write-Output "There is no need to update, exiting."
