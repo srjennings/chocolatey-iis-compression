@@ -72,16 +72,16 @@ function Get-MsiVersion {
   return $record.StringData(1)
 }
 
-$x86_version = Get-MsiVersion -msiPath $x86_msi
-$amd64_version = Get-MsiVersion -msiPath $amd64_msi
-Write-Output "x86 Version: $x86_version"
-Write-Output "amd64 Version: $amd64_version"
-
 $x86_hash = (Get-FileHash -Path $x86_msi -Algorithm SHA256).Hash
 $amd64_hash = (Get-FileHash -Path $amd64_msi -Algorithm SHA256).Hash
 
+Write-Output "Calculated x86 SHA256: $x86_hash"
+Write-Output "Expected x86 SHA256: $x86_sha256"
+Write-Output "Calculated amd64 SHA256: $amd64_hash"
+Write-Output "Expected amd64 SHA256: $amd64_sha256"
+
 if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
-  "Downloads are valid & Hashes match."
+  Write-Output "Downloads are valid & Hashes match."
   [xml]$nuspecContent = Get-Content -Path "..\..\iis-compression.nuspec"
   $id = $nuspecContent.package.metadata.id
   Write-Output "ID: $id"
@@ -99,7 +99,8 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
   }
 }
 else {
-  "Hashes do not match downloads. Please try downloading again."
-  # exit with a failure since we do not want this to ever work
+  Write-Output "Hashes do not match downloads. Please try downloading again."
+  Write-Output "Exiting with failure code."
   exit 1
 }
+
