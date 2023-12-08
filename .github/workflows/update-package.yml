@@ -2,7 +2,7 @@ name: Simplified Update Package
 
 on:
   schedule:
-    - cron: '0 0 * * *' # daily at midnight
+    - cron: '0 0 15 * *' # Every 15th day
   workflow_dispatch:
 
 jobs:
