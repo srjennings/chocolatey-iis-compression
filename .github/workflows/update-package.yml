@@ -1,9 +1,10 @@
-name: Simplified Update Package
+name: Update Package and Run Validation
 
 on:
-  schedule:
-    - cron: '0 0 15 * *' # Every 15th day
-  workflow_dispatch:
+  pull_request:
+    types:
+      - opened # When a pull request is opened
+      - synchronize # When a pull request is updated
 
 jobs:
   update:
@@ -15,16 +16,16 @@ jobs:
 
     - name: Run update package script
       run: ./update-package.ps1
-      working-directory: .github\workflows
+      working-directory: .github/workflows
 
     - name: Run validation checks
       run: ./run-validation-checks.ps1
-      working-directory: .github\workflows
+      working-directory: .github/workflows
 
     # Create Pull Request
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
       with:
-        title: "Update Package"
+        title: "Automated Package Update"
         body: "This is an automated pull request to update the package."
         branch: "feature/update-package-${{ github.run_number }}"
