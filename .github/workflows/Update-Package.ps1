@@ -15,6 +15,8 @@
 
 $TEMP = [System.IO.Path]::GetTempPath()
 
+$updated = 'False'
+
 $response = Invoke-RestMethod -Uri 'https://api.github.com/repos/microsoft/IIS.Compression/releases/latest'
 $bodyContent = $response.body
 
@@ -83,14 +85,14 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
 
   if ($msiVersion -eq $nuspecVersion) {
     Write-Output "MSI and nuspec versions match."
-    $update = $false
+    $updated = 'false'
   }
   else {
     Write-Output "MSI and nuspec versions do not match. Please update."
-    $update = $true
+    $updated = 'true'
   }
 
-  if ($update -eq $true) {
+  if ($updated -eq 'true') {
     Write-Output "Updating nuspec file with new version $msiVersion"
     $nuspecContent.package.metadata.version = $msiVersion
     $nuspecContent.package.metadata.licenseUrl = $response.license.url
@@ -111,8 +113,9 @@ if ($x86_hash -eq $x86_sha256 -and $amd64_hash -eq $amd64_sha256) {
     Write-Output "x86_sha256=$x86_sha256" >> $GITHUB_ENV
     Write-Output "x64_msi=$amd64_msi" >> $GITHUB_ENV
     Write-Output "amd64_sha256=$amd64_sha256" >> $GITHUB_ENV
+    Write-Output "updated=$updated" >> $GITHUB_ENV
   }
-  elseif ($update -eq $false) {
+  elseif ($updated -eq 'false') {
     Write-Output "There is no need to update, exiting."
     exit 0
   }

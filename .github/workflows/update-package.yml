@@ -25,7 +25,7 @@ jobs:
 
     # Create Pull Request
     - name: Create Pull Request
-      if: env.updated == 'True'
+      if: env.updated == 'true'
       uses: peter-evans/create-pull-request@v3
       with:
         title: "Update Package"
@@ -34,17 +34,17 @@ jobs:
 
     # Install Chocolatey
     - name: Install Chocolatey
-      if: env.updated == 'True'
+      if: env.updated == 'true'
       run: |
         Set-ExecutionPolicy Bypass -Scope Process -Force
         iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
     # Add API Key for Chocolatey
     - name: Add API Key
-      if: env.updated == 'True'
+      if: env.updated == 'true'
       run: choco apikey add --source "https://push.chocolatey.org/" --key "${{ secrets.CHOCO_API_KEY }}"
 
     # Push Chocolatey Package
     - name: Push Package
-      if: env.updated == 'True'
+      if: env.updated == 'true'
       run: choco push iis-compression.nupkg --source "https://push.chocolatey.org/"
